@@ -1,317 +1,310 @@
-# NYC Taxi Trip Duration Prediction Using Machine Learning Models (PySpark)
+# NYC Green Taxi Fare Prediction using ML Alogrithms in PySpark
 
-## Objective
-The primary objective of this project is to predict the trip duration of New York City taxi rides using various machine learning regression models. The project aims to compare the performance of Linear Regression, Decision Tree, and Random Forest models and determine the most accurate model based on Root Mean Squared Error (RMSE).
+## Project Overview
 
-## Scope of the Project
-1. **Data Preprocessing:** Cleaning and transforming the NYC taxi trip dataset to make it suitable for machine learning.
-2. **Feature Engineering:** Creating new features from the existing data to enhance model performance.
-3. **Model Training and Evaluation:** Training multiple machine learning models and evaluating their performance.
-4. **Visualization:** Visualizing the relationships in the data and the performance of the models.
-5. **Comparison and Selection:** Comparing the models based on their RMSE and selecting the best model.
+This project aims to predict fare amounts for NYC Green Taxi trips using machine learning techniques. I have employed various regression models to estimate trip fares based on features extracted from the dataset. The project includes data cleaning, feature engineering, model training, and evaluation using Linear Regression, Decision Tree Regressor, and Random Forest Regressor.
 
 ## Dataset
-The dataset used in this project is the NYC TLC Green Taxi Trip Records dataset. It contains trip records for green taxis in New York City, including information such as pickup and dropoff times and locations, trip distances, fare amounts, and passenger counts.
 
-### Dataset Details
-- **vendorID:** A code indicating the provider associated with the trip record.
-- **lpepPickupDatetime:** The date and time when the meter was engaged.
-- **lpepDropoffDatetime:** The date and time when the meter was disengaged.
-- **storeAndFwdFlag:** This flag indicates whether the trip record was held in vehicle memory before sending to the vendor because the vehicle did not have a connection to the server. (Y = store and forward; N = not a store and forward trip)
-- **rateCodeID:** The final rate code in effect at the end of the trip.
-- **pickupLongitude:** The longitude where the meter was engaged.
-- **pickupLatitude:** The latitude where the meter was engaged.
-- **dropoffLongitude:** The longitude where the meter was disengaged.
-- **dropoffLatitude:** The latitude where the meter was disengaged.
-- **passengerCount:** The number of passengers in the vehicle. This is a driver-entered value.
-- **tripDistance:** The elapsed trip distance in miles reported by the taximeter.
-- **fareAmount:** The time-and-distance fare calculated by the meter.
-- **extra:** Miscellaneous extras and surcharges. Currently, this only includes the $0.50 and $1 rush hour and overnight charges.
-- **mtaTax:** $0.50 MTA tax that is automatically triggered based on the metered rate in use.
-- **tipAmount:** Tip amount – This field is automatically populated for credit card tips. Cash tips are not included.
-- **tollsAmount:** Total amount of all tolls paid in trip.
-- **ehailFee:** The total amount of all fees to e-hail the trip.
-- **improvementSurcharge:** $0.30 improvement surcharge assessed trips at the flag drop. The improvement surcharge began being levied in 2015.
-- **totalAmount:** The total amount charged to passengers. Does not include cash tips.
+The dataset used in this project is from the NYC Taxi and Limousine Commission (TLC). It contains records of trips made by NYC Green Taxis. Here is a detailed explanation of the dataset columns:
 
-- **Dataset Link:** [NYC TLC Green Taxi Trip Records](https://www.nyc.gov/site/tlc/about/tlc-trip-record-data.page)
+- `vendorID`: Identifier for the taxi vendor.
+- `lpepPickupDatetime`: Pickup datetime of the trip.
+- `lpepDropoffDatetime`: Dropoff datetime of the trip.
+- `tripDistance`: Distance of the trip in miles.
+- `fareAmount`: Fare amount in USD.
+- `extra`: Additional charges for the trip.
+- `mtaTax`: MTA tax for the trip.
+- `improvementSurcharge`: Improvement surcharge for the trip.
+- `tipAmount`: Tip amount given in USD.
+- `tollsAmount`: Amount of tolls paid for the trip.
+- `totalAmount`: Total amount paid for the trip.
+- `passengerCount`: Number of passengers in the trip.
+- `pickupLocationId`: Pickup location identifier.
+- `dropoffLocationId`: Dropoff location identifier.
+- `tripType`: Type of the trip (e.g., street-hail or dispatch).
+- `storeAndFwdFlag`: Flag indicating if the trip data was stored and forwarded.
+
+## Objective
+
+The objective of this project is to build and evaluate multiple regression models to predict the total fare amount for NYC Green Taxi trips. The models tested include:
+
+- **Linear Regression**
+- **Decision Tree Regressor**
+- **Random Forest Regressor**
+
+## Scope
+
+- **Data Cleaning**: Handle missing values and drop unnecessary columns.
+- **Feature Engineering**: Create new features from datetime columns and convert categorical features to numerical values.
+- **Model Training**: Train and evaluate Linear Regression, Decision Tree Regressor, and Random Forest Regressor models.
+- **Evaluation**: Assess model performance using metrics such as Root Mean Squared Error (RMSE) and R^2 score.
 
 ## Technologies Used
-- **Programming Language:** Python
-- **Data Processing:** PySpark
-- **Machine Learning:** PySpark MLlib
-- **Visualization:** Matplotlib, Seaborn
-- **Data Handling:** Pandas
 
-## Applications
-- **Traffic Management:** Predicting trip durations can help in optimizing routes and managing traffic congestion.
-- **Fare Estimation:** Enhancing fare estimation models for better pricing strategies.
-- **Service Optimization:** Improving the efficiency of taxi services by predicting trip times accurately.
-- **Urban Planning:** Assisting urban planners in understanding transportation patterns and making informed decisions.
-
-## Future Extensions
-1. **Incorporate Additional Data:** Include weather data, traffic data, and special events to improve model accuracy.
-2. **Use Advanced Models:** Experiment with more advanced machine learning models such as Gradient Boosting Machines or Neural Networks.
-3. **Real-time Predictions:** Implement real-time trip duration prediction for live data.
-4. **Deploy the Model:** Create a web or mobile application for users to predict trip durations on-the-go.
+- **Apache Spark**: For data processing and machine learning tasks.
+- **Pandas**: For data manipulation and analysis.
+- **Matplotlib & Seaborn**: For data visualization.
+- **PySpark MLlib**: For machine learning models and evaluation.
 
 ## Code Explanation
 
-### Data Loading and Preprocessing
+### 1. Initialize Spark Session
 
 ```python
 from pyspark.sql import SparkSession
-
-#Initialize Spark Session
 spark = SparkSession.builder.appName("NYC_Taxi_Analysis").getOrCreate()
-
-# Load the dataset
-df = spark.read.csv('nyc_tlc_green.csv', header=True, inferSchema=True)
-
-# Show the schema of the DataFrame
-df.printSchema()
-
-df.dtypes
-
-# Display the first few rows
-df.show(5)
-
-from pyspark.sql.functions import col, count, when
-
-# Count NULL values in each column
-null_counts = df.select(
-    [count(when(col(c).isNull(), c)).alias(c) for c in df.columns]
-)
-null_counts.show()
-
-df = df.drop('pickupLongitude', 'pickupLatitude', 'dropoffLongitude', 'dropoffLatitude', 'ehailFee')
-df.show()
-
-# Count NULL values again in each column
-null_counts = df.select(
-    [count(when(col(c).isNull(), c)).alias(c) for c in df.columns]
-)
-null_counts.show()
-
-df.dtypes
 ```
+This initializes a Spark session to use Spark's DataFrame and machine learning capabilities.
 
-### Feature Engineering
+### 2. Read the Dataset
 
 ```python
-from pyspark.ml.feature import StringIndexer
-
-# Convert categorical columns to numerical
-# Initialize the StringIndexer for the 'storeAndFwdFlag' column
-indexer = StringIndexer(inputCol="storeAndFwdFlag", outputCol="storeAndFwdFlagIndex")
-
-# Fit the indexer to the DataFrame and transform it
-df = indexer.fit(df).transform(df)
-
-# Show the transformed DataFrame with new columns
+df = spark.read.csv('dbfs:/FileStore/shared_uploads/jameers2003@gmail.com/nyc_tlc_green.csv', header=True, inferSchema=True)
 df.show(5)
+```
+Reads the dataset into a Spark DataFrame with automatic schema inference.
 
-# Drop original categorical columns
-df = df.drop('storeAndFwdFlag')
-df.show()
+### 3. Show Data Schema
 
+```python
+df.printSchema()
 df.dtypes
+```
+Displays the schema and data types of the DataFrame columns.
 
-from pyspark.sql.functions import hour, month, dayofweek
+### 4. Count NULL Values
 
-# Create new columns: hour, month, day of week
-df = df.withColumn('hour', hour(df['lpepPickupDatetime']))
-df = df.withColumn('month', month(df['lpepPickupDatetime']))
-df = df.withColumn('dayofweek', dayofweek(df['lpepPickupDatetime']))
+```python
+from pyspark.sql.functions import col, count, when
+null_counts = df.select(
+    [count(when(col(c).isNull(), c)).alias(c) for c in df.columns]
+)
+null_counts.show()
+```
+Counts the number of NULL values in each column.
 
-df.show(5)
+### 5. Data Cleaning
 
-# Display summary statistics
+```python
+df = df.drop('pickupLongitude', 'pickupLatitude', 'dropoffLongitude', 'dropoffLatitude', 'ehailFee')
+df.show()
+```
+Drops columns that are not needed for analysis.
+
+### 6. Recheck NULL Values
+
+```python
+null_counts = df.select(
+    [count(when(col(c).isNull(), c)).alias(c) for c in df.columns]
+)
+null_counts.show()
+```
+Counts NULL values again after dropping columns.
+
+### 7. Display Summary Statistics
+
+```python
 df.describe().show()
+```
+Shows summary statistics for numerical columns.
 
+### 8. Convert to Pandas DataFrame
+
+```python
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
-
-# Convert to pandas DataFrame
 pandas_df = df.toPandas()
+```
+Converts the Spark DataFrame to a Pandas DataFrame for more detailed analysis and visualization.
 
-# Convert 'lpepPickupDatetime' and 'lpepDropoffDatetime' to pandas datetime if not already
+### 9. Feature Engineering
+
+```python
 pandas_df['lpepPickupDatetime'] = pd.to_datetime(pandas_df['lpepPickupDatetime'])
 pandas_df['lpepDropoffDatetime'] = pd.to_datetime(pandas_df['lpepDropoffDatetime'])
-
-# Calculate trip duration in seconds
 pandas_df['trip_time_in_secs'] = (pandas_df['lpepDropoffDatetime'] - pandas_df['lpepPickupDatetime']).dt.total_seconds()
+```
+Converts datetime columns to Pandas datetime objects and calculates trip duration in seconds.
 
-pandas_df.head()
+### 10. Visualize Data
 
-# Scatter plot of trip distance vs. trip duration
+```python
 plt.figure(figsize=(12, 6))
 sns.scatterplot(x='tripDistance', y='trip_time_in_secs', data=pandas_df)
 plt.title('Trip Distance vs. Trip Duration')
 plt.xlabel('Trip Distance (miles)')
 plt.ylabel('Trip Duration (seconds)')
 plt.show()
+```
+Creates scatter plots and heatmaps to visualize relationships and correlations in the data.
 
-# Scatter plot of fare amount vs. trip duration
-plt.figure(figsize=(12, 6))
-sns.scatterplot(x='fareAmount', y='trip_time_in_secs', data=pandas_df, alpha=0.5)
-plt.title('Fare Amount vs. Trip Duration')
-plt.xlabel('Fare Amount ($)')
-plt.ylabel('Trip Duration (seconds)')
-plt.show()
+### 11. Feature Assembly
 
-# Compute the correlation matrix
-corr = pandas_df[['tripDistance', 'trip_time_in_secs', 'fareAmount', 'extra', 'mtaTax', 'improvementSurcharge', 'tipAmount', 'tollsAmount', 'totalAmount']].corr()
-
-# Plot the heatmap
-plt.figure(figsize=(12, 10))
-sns.heatmap(corr, annot=True, cmap='coolwarm', fmt='.2f', vmin=-1, vmax=1)
-plt.title('Correlation Heatmap')
-plt.show()
-
+```python
 from pyspark.ml.feature import VectorAssembler
-from pyspark.sql.functions import col
-
-# Convert pandas DataFrame to PySpark DataFrame
-pandas_df_spark = spark.createDataFrame(pandas_df)
-
-pandas_df_spark.printSchema()
-
-pandas_df_spark.show()
-
-# Select the required columns from pandas_df_spark for the join
-pandas_df_spark = pandas_df_spark.select('vendorID', 'lpepPickupDatetime', 'lpepDropoffDatetime', 'trip_time_in_secs')
-
-# Perform the join operation
-df = df.join(pandas_df_spark, on=['vendorID', 'lpepPickupDatetime', 'lpepDropoffDatetime'], how='inner')
-
-df.show(5)
-
-# Rename 'trip_time_in_secs' to 'label'
-df = df.withColumnRenamed('trip_time_in_secs', 'label')
-
-# Select features and label
 feature_columns = [
-    'tripDistance', 'hour', 'month', 'dayofweek', 'puLocationId', 'doLocationId',
-    'passengerCount', 'fareAmount', 'extra', 'mtaTax', 'tipAmount', 'tollsAmount',
-    'improvementSurcharge', 'totalAmount', 'storeAndFwdFlagIndex'
+    'tripDistance', 'passengerCount', 'tripType', 'improvementSurcharge', 'tollsAmount', 'tipAmount', 'extra', 'mtaTax'
 ]
 assembler = VectorAssembler(inputCols=feature_columns, outputCol='features')
 df = assembler.transform(df)
+```
+Assembles feature columns into a single vector for use in machine learning models.
 
-df.show()
+### 12. Prepare Data for Modeling
 
-# Select the label and features
-df_lr = df.select("features", col("label"))
-df_lr.show()
-
-# Split the data into training
-
- and test sets
+```python
+df_lr = df.select("features", col("totalAmount"))
 train_df, test_df = df_lr.randomSplit([0.8, 0.2])
+```
+Prepares data for training and testing by splitting it into feature vectors and labels.
 
-from pyspark.ml.regression import LinearRegression, DecisionTreeRegressor, RandomForestRegressor
+## Model Training and Evaluation
+
+### Linear Regression
+
+```python
+from pyspark.ml.regression import LinearRegression
 from pyspark.ml.evaluation import RegressionEvaluator
 
-# Initialize the Linear Regression model
-lr = LinearRegression(featuresCol='features', labelCol='label')
+# Initialize Linear Regression model
+lr = LinearRegression(featuresCol='features', labelCol='totalAmount')
 
-# Fit the model to the training data
+# Train the model
 lr_model = lr.fit(train_df)
 
-# Make predictions on the test data
+# Make predictions
 lr_predictions = lr_model.transform(test_df)
 
-# Evaluate the model using RMSE
-lr_evaluator = RegressionEvaluator(labelCol='label', predictionCol='prediction', metricName='rmse')
-lr_rmse = lr_evaluator.evaluate(lr_predictions)
+# Evaluate the model rmse value
+evaluator_rmse = RegressionEvaluator(labelCol='totalAmount', predictionCol='prediction', metricName='rmse')
+lr_rmse = evaluator_rmse.evaluate(lr_predictions)
 print(f"Root Mean Squared Error (RMSE) for Linear Regression: {lr_rmse}")
 
-# Convert Spark DataFrame to Pandas DataFrame for plotting
-lr_predictions_pd = lr_predictions.select('label', 'prediction').toPandas()
+# Evaluate the model r2 score
+evaluator_r2 = RegressionEvaluator(labelCol='totalAmount', predictionCol='prediction', metricName='r2')
+lr_r2 = evaluator_r2.evaluate(lr_predictions)
+print(f"R2 Score for Linear Regression: {lr_r2}")
 
-# Scatter plot
-plt.figure(figsize=(10, 6))
-plt.scatter(lr_predictions_pd['label'], lr_predictions_pd['prediction'], alpha=0.5)
-plt.plot([lr_predictions_pd['label'].min(), lr_predictions_pd['label'].max()],
-         [lr_predictions_pd['label'].min(), lr_predictions_pd['label'].max()],
-         color='red', lw=2)
-plt.xlabel('Actual Values')
-plt.ylabel('Predicted Values')
-plt.title('Linear Regression: Actual vs Predicted')
-plt.show()
+# Print the coefficients and intercept for linear regression
+print("Coefficients: " + str(lr_model.coefficients))
+print("Intercept: " + str(lr_model.intercept))
+```
 
-# Initialize the Decision Tree Regressor
-dt = DecisionTreeRegressor(featuresCol='features', labelCol='label')
+Trains and evaluates the Linear Regression model. It calculates RMSE and R^2 score to assess performance and prints the coefficients and intercept.
 
-# Fit the model to the training data
+### Decision Tree Regressor
+
+```python
+from pyspark.ml.regression import DecisionTreeRegressor
+
+# Initialize Decision Tree Regressor model
+dt = DecisionTreeRegressor(featuresCol='features', labelCol='totalAmount')
+
+# Train the model
 dt_model = dt.fit(train_df)
 
-# Make predictions on the test data
+# Make predictions on test data
 dt_predictions = dt_model.transform(test_df)
 
-# Evaluate the model using RMSE
-dt_evaluator = RegressionEvaluator(labelCol='label', predictionCol='prediction', metricName='rmse')
-dt_rmse = dt_evaluator.evaluate(dt_predictions)
-print(f"Root Mean Squared Error (RMSE) for Decision Tree: {dt_rmse}")
+# Evaluate the model rmse value
+evaluator_rmse = RegressionEvaluator(labelCol='totalAmount', predictionCol='prediction', metricName='rmse')
+dt_rmse = evaluator_rmse.evaluate(dt_predictions)
+print(f"Root Mean Squared Error (RMSE) for Decision Tree Regressor: {dt_rmse}")
 
-# Convert Spark DataFrame to Pandas DataFrame for plotting
-dt_predictions_pd = dt_predictions.select('label', 'prediction').toPandas()
+# Evaluate the model r2 value
+evaluator_r2 = RegressionEvaluator(labelCol='totalAmount', predictionCol='prediction', metricName='r2')
+dt_r2 = evaluator_r2.evaluate(dt_predictions)
+print(f"R2 Score for Decision Tree Regressor: {dt_r2}")
+```
 
-# Scatter plot
-plt.figure(figsize=(10, 6))
-plt.scatter(dt_predictions_pd['label'], dt_predictions_pd['prediction'], alpha=0.5)
-plt.plot([dt_predictions_pd['label'].min(), dt_predictions_pd['label'].max()],
-         [dt_predictions_pd['label'].min(), dt_predictions_pd['label'].max()],
-         color='red', lw=2)
-plt.xlabel('Actual Values')
-plt.ylabel('Predicted Values')
-plt.title('Decision Tree: Actual vs Predicted')
-plt.show()
+Trains and evaluates the Decision Tree Regressor model. It calculates RMSE and R^2 score to assess performance.
 
-# Initialize the Random Forest Regressor
-rf = RandomForestRegressor(featuresCol='features', labelCol='label')
+### Random Forest Regressor
 
-# Fit the model to the training data
+```python
+from pyspark.ml.regression import RandomForestRegressor
+
+# Initialize Random Forest Regressor model
+rf = RandomForestRegressor(featuresCol='features', labelCol='totalAmount')
+
+# Train the model
 rf_model = rf.fit(train_df)
 
-# Make predictions on the test data
+# Make predictions
 rf_predictions = rf_model.transform(test_df)
 
-# Evaluate the model using RMSE
-rf_evaluator = RegressionEvaluator(labelCol='label', predictionCol='prediction', metricName='rmse')
-rf_rmse = rf_evaluator.evaluate(rf_predictions)
-print(f"Root Mean Squared Error (RMSE) for Random Forest: {rf_rmse}")
+# Evaluate the model rmse value
+evaluator_rmse = RegressionEvaluator(labelCol='totalAmount', predictionCol='prediction', metricName='rmse')
+rf_rmse = evaluator_rmse.evaluate(rf_predictions)
+print(f"Root Mean Squared Error (RMSE) for Random Forest Regressor: {rf_rmse}")
 
-# Convert Spark DataFrame to Pandas DataFrame for plotting
-rf_predictions_pd = rf_predictions.select('label', 'prediction').toPandas()
+# Evaluate the model r2 score
+evaluator_r2 = RegressionEvaluator(labelCol='totalAmount', predictionCol='prediction', metricName='r2')
+rf_r2 = evaluator_r2.evaluate(rf_predictions)
+print(f"R2 Score for Random Forest Regressor: {rf_r2}")
+```
 
-# Scatter plot
-plt.figure(figsize=(10, 6))
-plt.scatter(rf_predictions_pd['label'], rf_predictions_pd['prediction'], alpha=0.5)
-plt.plot([rf_predictions_pd['label'].min(), rf_predictions_pd['label'].max()],
-         [rf_predictions_pd['label'].min(), rf_predictions_pd['label'].max()],
-         color='red', lw=2)
-plt.xlabel('Actual Values')
-plt.ylabel('Predicted Values')
-plt.title('Random Forest: Actual vs Predicted')
-plt.show()
+Trains and evaluates the Random Forest Regressor model. It calculates RMSE and R^2 score to assess performance and prints feature importances.
 
-# Compare the performance of the models
-rmse_scores = {
-    "Linear Regression": lr_rmse,
-    "Decision Tree": dt_rmse,
-    "Random Forest": rf_rmse
+## Compare Model Performance
+
+```python
+models = {
+    "Model": ['LinearRegression', 'DecisionTreeRegressor', 'RandomForestRegressor'],
+    "RMSE": [lr_rmse, dt_rmse, rf_rmse],
+    "R2": [lr_r2, dt_r2, rf_r2]
 }
+model_scores = pd.DataFrame(models)
+print(model_scores)
+```
 
-print(f"RMSE Scores: {rmse_scores}")
+Compares the performance of different models based on RMSE and R^2 score.
 
-# Choose the best model based on RMSE
-best_model = min(rmse_scores, key=rmse_scores.get)
+## Choose the Best Model
+
+```python
+best_model = 'Linear Regression' if lr_rmse < dt_rmse and lr_rmse < rf_rmse else 'Decision Tree' if dt_rmse < lr_rmse and dt_rmse < rf_rmse else 'Random Forest'
 print(f"The best model is: {best_model}")
 ```
 
+Identifies the best-performing model based on the lowest RMSE.
+
 ## Conclusion
-This project demonstrates the process of predicting NYC taxi trip durations using various machine learning models, including Linear Regression, Decision Tree, and Random Forest. The project involves data preprocessing, feature engineering, model training, and evaluation. Based on RMSE, the best-performing model is selected to provide accurate trip duration predictions.
+
+In this project, we have successfully built and evaluated three different regression models to predict NYC Green Taxi fares. The Linear Regression model, Decision Tree Regressor, and Random Forest Regressor were compared based on their RMSE and R^2 scores.
+
+The results indicate that Linear Regression model performed the best, with the lowest RMSE and highest R^2 score. This model can be effectively used to estimate taxi fares, which can be useful for dynamic pricing and fare prediction applications in real-time scenarios.
+
+By incorporating more features or using advanced techniques, the model's performance can potentially be improved further. Future work may involve integrating real-time data and experimenting with other algorithms to enhance accuracy.
+
+## Applications
+
+This model can be used by taxi companies or fare estimation services to predict trip fares accurately. It can help in:
+
+- **Fare Estimation**: Providing passengers with accurate fare estimates.
+- **Dynamic Pricing**: Adjusting prices based on trip characteristics and demand.
+- **Service Improvement**: Analyzing fare trends to improve service quality.
+
+## How It Can Be Extended
+
+- **Integration with Real-Time Data**: Apply the model to real-time data for live fare predictions.
+- **Feature Expansion**: Incorporate additional features such as weather conditions or traffic data.
+- **Model Improvement**: Experiment with other machine learning algorithms or ensemble methods for better accuracy.
+
+## Dataset Links
+
+- **[NYC Taxi and Limousine Commission (TLC) Dataset](https://www.nyc.gov/site/tlc/about/tlc-trip-record-data.page)**
+
+## Usage
+
+To run this project, ensure you have a Spark environment set up. Follow these steps:
+
+1. **Load the Dataset**: Place the dataset in the specified location.
+2. **Run the Notebook**: Execute each cell in the Databricks notebook to process the data and train models.
+
+## Contact
+
+For any queries, feel free to reach out to me at [jameers2003@gmail.com](mailto:jameers2003@gmail.com).
